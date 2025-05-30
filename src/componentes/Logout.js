@@ -1,26 +1,18 @@
+import React, { useEffect } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import { signOut } from 'firebase/auth';
-import { auth } from '../firebaseConfig.js'; // Ajusta el path si es
-diferente
-import mostrarLogin from './login.js';
 
-export default function mostrarLogout() {
-const app = document.getElementById("app");
+import { auth } from '../../firebase/firebaseConfig';
 
-app.innerHTML = `
-<div style="display: flex; justify-content: center; align-items:
-center; height: 100vh;">
-<p>Cerrando sesión...</p>
-</div>
-`;
+export default function Logout() {
+useEffect(() => {
+signOut(auth);
+}, []);
 
-// Cerrar sesión y redirigir al login
-
-signOut(auth)
-.then(() => {
-mostrarLogin();
-})
-.catch((error) => {
-alert("Error al cerrar sesión: " + error.message);
-mostrarLogin(); // Aun con error, regresamos al login
-});
+return (
+<View style={{ flex: 1, justifyContent: 'center', alignItems:
+'center' }}>
+<ActivityIndicator size="large" />
+</View>
+);
 }

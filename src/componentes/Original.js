@@ -1,140 +1,62 @@
-import { auth, db } from '../firebaseConfig.js';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Alert,
+ActivityIndicator, ScrollView } from 'react-native';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { db, auth } from '../../firebase/firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
 
-const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ-:\'. '.split('');
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ-:.\' '.split('');
 const MAX_ATTEMPTS = 5;
 
-let pokemonName = '';
-let pokemonId = '';
-let pokemonImage = '';
-let guessedLetters = [];
-let wrongGuesses = 0;
-let gameOver = false;
-let gameWon = false;
-let userWin = 0;
+export default function JuegoPokemon() {
 
-let userLose = 0;
-let uid = null;
+const [pokemonName, setPokemonName] = useState('');
+const [pokemonImage, setPokemonImage] = useState('');
+const [pokemonId, setPokemonId] = useState('');
+const [guessedLetters, setGuessedLetters] = useState([]);
+const [wrongGuesses, setWrongGuesses] = useState(0);
+const [gameOver, setGameOver] = useState(false);
+const [gameWon, setGameWon] = useState(false);
+const [loading, setLoading] = useState(true);
 
-const app = document.getElementById('app');
+const [userWin, setUserWin] = useState(0);
+const [userLose, setUserLose] = useState(0);
+const [uid, setUid] = useState(null); // Agrega estado uid
+correctamente
 
-function createElement(tag, props = {}, ...children) {
-const el = document.createElement(tag);
-for (const [key, value] of Object.entries(props)) {
-if (key === 'className') el.className = value;
-else if (key.startsWith('on') && typeof value === 'function') {
-el.addEventListener(key.substring(2).toLowerCase(), value);
-} else {
-el.setAttribute(key, value);
+// Escuchar el login del usuario
+useEffect(() => {
+const unsubscribe = onAuthStateChanged(auth, (user) => {
+if (user) {
+setUid(user.uid);
 }
-}
-for (const child of children) {
-if (typeof child === 'string')
-el.appendChild(document.createTextNode(child));
-else if (child instanceof Node) el.appendChild(child);
-}
-return el;
-}
-
-function render() {
-app.innerHTML = '';
-
-const title = createElement('h2', {}, 'Adivina el Pokémon');
-const stats = createElement('p', {}, `Ganados: ${userWin} | Perdidos:
-${userLose}`);
-app.appendChild(title);
-
-app.appendChild(stats);
-
-if (!pokemonName) {
-app.appendChild(createElement('p', {}, 'Cargando Pokémon...'));
-return;
-}
-
-app.appendChild(createElement('p', {}, `ID: ${pokemonId}`));
-
-const img = createElement('img', { src: pokemonImage, alt:
-pokemonName, style: 'width:150px;height:150px;' });
-app.appendChild(img);
-
-// Mostrar palabra con guiones o letras
-const wordDiv = createElement('div');
-for (const letter of pokemonName) {
-const displayLetter = (guessedLetters.includes(letter) || gameOver
-|| gameWon) ? letter : '_';
-const span = createElement('span', { style: 'margin-right: 6px;' },
-displayLetter);
-wordDiv.appendChild(span);
-}
-app.appendChild(wordDiv);
-
-// Teclado
-const keyboardDiv = createElement('div', { style: 'display:flex;flex-wrap:wrap; max-width: 400px; gap:6px; margin:10px 0;' });
-
-ALPHABET.forEach(letter => {
-const disabled = guessedLetters.includes(letter) || gameOver ||
-gameWon;
-
-const btn = createElement('button', {
-style: `width: 35px; height:35px; cursor:${disabled ?
-'not-allowed' : 'pointer'}; opacity: ${disabled ? 0.5 : 1}`,
-onclick: () => handleLetterClick(letter)
-}, letter);
-keyboardDiv.appendChild(btn);
 });
+return unsubscribe;
+}, []);
 
-app.appendChild(keyboardDiv);
-
-// Fallos
-app.appendChild(createElement('p', {}, `Fallos: ${wrongGuesses} /
-${MAX_ATTEMPTS}`));
-
-if (gameOver) {
-app.appendChild(createElement('p', { style: 'color: red;  font-weight: bold;' }, `💀 ¡Perdiste! Era: ${pokemonName}`));
-}
-if (gameWon) {
-app.appendChild(createElement('p', { style: 'color: green;font-weight: bold;' }, `🎉 ¡Ganaste!`));
-}
-
-if (gameOver || gameWon) {
-const restartBtn = createElement('button', {
-onclick: restartGame,
-style: 'margin-top: 10px; padding: 8px 16px; font-weight: bold;'
-}, 'Jugar otra vez');
-app.appendChild(restartBtn);
-}
-
-}
-
-async function handleLetterClick(letter) {
-if (guessedLetters.includes(letter) || gameOver || gameWon) return;
-
-guessedLetters.push(letter);
-
-if (!pokemonName.includes(letter)) {
-wrongGuesses++;
-if (wrongGuesses >= MAX_ATTEMPTS) {
-gameOver = true;
-userLose++;
-await guardarResultado(false);
-}
-} else {
-// Verificar si ganó
-const allCorrect = [...pokemonName].every(l =>
-guessedLetters.includes(l));
-if (allCorrect) {
-gameWon = true;
-userWin++;
-await guardarResultado(true);
-}
-}
-render();
-}
-
-async function guardarResultado(acierto) {
+// Obtener datos del usuario
+useEffect(() => {
 if (!uid) return;
+const traerDatos = async () => {
+const docRef = doc(db, 'usuarios', uid);
 
+const docSnap = await getDoc(docRef);
+if (docSnap.exists()) {
+const data = docSnap.data();
+setUserWin(data.ganados || 0);
+setUserLose(data.perdidos || 0);
+} else {
+await setDoc(docRef, { ganados: 0, perdidos: 0 }); //inicializar si no existe
+setUserWin(0);
+setUserLose(0);
+}
+setLoading(false);
+};
+traerDatos();
+}, [uid]);
+
+const guardarResultado = async (acierto) => {
+if (!uid) return;
 const fecha = new Date().toISOString();
 
 const resultado = {
@@ -146,74 +68,191 @@ fecha,
 };
 
 try {
+
+// Guardar resultado individual
 await setDoc(doc(db, 'resultados', `${uid}_${fecha}`), resultado);
+
+// Actualizar campos ganados/perdidos del usuario
 const docRef = doc(db, 'usuarios', uid);
 await updateDoc(docRef, {
-ganados: acierto ? userWin : userWin,
-perdidos: !acierto ? userLose : userLose,
+ganados: acierto ? userWin + 1 : userWin,
+perdidos: !acierto ? userLose + 1 : userLose,
 });
 } catch (e) {
 console.error('Error al guardar resultado:', e);
 }
-}
+};
 
-async function fetchRandomPokemon() {
-app.innerHTML = '<p>Cargando Pokémon...</p>';
+useEffect(() => {
+const getRandomPokemon = async () => {
 const id = Math.floor(Math.random() * 1025) + 1;
 try {
-const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
-const data = await res.json();
-pokemonName = data.name.toUpperCase();
+const response = await
+fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+const data = await response.json();
+setPokemonName(data.name.toUpperCase());
+setPokemonId(data.id);
+setPokemonImage(
 
-pokemonId = data.id;
-pokemonImage =
 `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokem
-on/other/official-artwork/${id}.png`;
-} catch (error) {
-console.error('Error al obtener el Pokémon:', error);
+on/other/official-artwork/${id}.png`
+);
+setLoading(false);
+} catch (err) {
+
+console.error('Error al obtener el Pokémon:', err);
 }
+};
+getRandomPokemon();
+}, []);
+
+const handleLetterClick = async (letter) => {
+if (guessedLetters.includes(letter) || gameOver || gameWon) return;
+
+const updatedGuessed = [...guessedLetters, letter];
+setGuessedLetters(updatedGuessed);
+
+if (!pokemonName.includes(letter)) {
+const newWrongGuesses = wrongGuesses + 1;
+setWrongGuesses(newWrongGuesses);
+if (newWrongGuesses >= MAX_ATTEMPTS) {
+setGameOver(true);
+setUserLose(userLose + 1)
+await guardarResultado(false);
 }
-
-async function restartGame() {
-guessedLetters = [];
-wrongGuesses = 0;
-gameOver = false;
-gameWon = false;
-pokemonName = '';
-pokemonId = '';
-pokemonImage = '';
-
-await fetchRandomPokemon();
-render();
-}
-
-async function cargarDatosUsuario() {
-if (!uid) return;
-
-const docRef = doc(db, 'usuarios', uid);
-const docSnap = await getDoc(docRef);
-
-if (docSnap.exists()) {
-const data = docSnap.data();
-
-userWin = data.ganados || 0;
-userLose = data.perdidos || 0;
 } else {
-await setDoc(docRef, { ganados: 0, perdidos: 0 });
-userWin = 0;
-userLose = 0;
-}
-}
+const allCorrect = pokemonName
+.split('')
+.every((l) => updatedGuessed.includes(l));
+if (allCorrect) {
+setGameWon(true);
+setUserWin(userWin + 1)
+await guardarResultado(true);
 
-export default function mostrarOriginal() {
-onAuthStateChanged(auth, async (user) => {
-if (user) {
-uid = user.uid;
-await cargarDatosUsuario();
-await fetchRandomPokemon();
-render();
-} else {
-app.innerHTML = '<p>Por favor inicia sesión para jugar.</p>';
 }
+}
+};
+
+const renderWord = () =>
+pokemonName.split('').map((letter, index) => (
+<Text key={index} style={styles.letter}>
+{guessedLetters.includes(letter) || gameOver || gameWon ? letter
+: '_'}
+</Text>
+));
+
+const restartGame = () => {
+setGuessedLetters([]);
+setWrongGuesses(0);
+setGameOver(false);
+setGameWon(false);
+setLoading(true);
+setPokemonName('');
+setPokemonId('');
+setPokemonImage('');
+// vuelve a buscar un Pokémon nuevo
+const id = Math.floor(Math.random() * 1025) + 1;
+fetch(`https://pokeapi.co/api/v2/pokemon/${id}`)
+.then((res) => res.json())
+.then((data) => {
+setPokemonName(data.name.toUpperCase());
+setPokemonId(data.id);
+setPokemonImage(
+
+`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokem
+on/other/official-artwork/${id}.png`
+);
+setLoading(false);
 });
+};
+
+return (
+<ScrollView contentContainerStyle={styles.container}>
+<Text style={styles.title}>Adivina el Pokémon</Text>
+<Text style={styles.stats}>Ganados: {userWin} | Perdidos:
+{userLose}</Text>
+{loading ? (
+<ActivityIndicator size="large" />
+) : (
+<>
+<Text>{pokemonId}</Text>
+<Image source={{ uri: pokemonImage }} style={styles.image} />
+<View style={styles.wordContainer}>{renderWord()}</View>
+
+<View style={styles.keyboard}>
+{ALPHABET.map((letter) => (
+<TouchableOpacity
+key={letter}
+onPress={() => handleLetterClick(letter)}
+disabled={guessedLetters.includes(letter) || gameOver ||
+gameWon}
+style={[
+styles.key,
+
+guessedLetters.includes(letter) && styles.keyDisabled,
+]}
+>
+<Text>{letter}</Text>
+</TouchableOpacity>
+))}
+</View>
+
+<Text style={styles.attempts}>
+Fallos: {wrongGuesses} / {MAX_ATTEMPTS}
+</Text>
+
+{gameOver && (
+<Text style={styles.lost}>💀 ¡Perdiste! Era:
+{pokemonName}</Text>
+)}
+{gameWon && <Text style={styles.won}>🎉 ¡Ganaste!</Text>}
+
+{(gameOver || gameWon) && (
+<TouchableOpacity style={styles.button}
+onPress={restartGame}>
+<Text style={styles.buttonText}>Jugar otra vez</Text>
+</TouchableOpacity>
+)}
+</>
+)}
+</ScrollView>
+);
 }
+
+const styles = StyleSheet.create({
+container: { padding: 20, alignItems: 'center' },
+title: { fontSize: 24, marginBottom: 10 },
+image: { width: 150, height: 150, marginVertical: 10 },
+stats: { marginBottom: 10, fontSize: 16 },
+wordContainer: { flexDirection: 'row', marginBottom: 20, flexWrap:
+'wrap' },
+letter: { fontSize: 28, marginHorizontal: 4 },
+keyboard: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+justifyContent: 'center',
+marginBottom: 20,
+},
+key: {
+backgroundColor: '#eee',
+padding: 10,
+margin: 4,
+borderRadius: 4,
+width: 40,
+alignItems: 'center',
+},
+keyDisabled: {
+backgroundColor: '#ccc',
+},
+attempts: { fontSize: 16, marginBottom: 10 },
+lost: { color: 'red', fontSize: 18 },
+won: { color: 'green', fontSize: 18 },
+button: {
+
+marginTop: 10,
+padding: 10,
+backgroundColor: '#0066cc',
+borderRadius: 5,
+},
+buttonText: { color: 'white', fontWeight: 'bold' },
+});

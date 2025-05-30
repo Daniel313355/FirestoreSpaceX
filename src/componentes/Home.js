@@ -1,34 +1,71 @@
-export default async function mostrarHome() {
-const app = document.getElementById("app");
-app.innerHTML = `<h2>Pokémon</h2><div id="lista" style="display: flex;
-flex-wrap: wrap; gap: 10px; justify-content: space-between; padding:
-10px;"></div>`;
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View, ScrollView, Image } from
+'react-native';
 
-const lista = document.getElementById("lista");
+export default function Home() {
+const [data, setData] = useState([]);
 
-try {
+useEffect(() => {
+const obtenerDatos = async () => {
 const res = await
-fetch("https://pokeapi.co/api/v2/pokemon?limit=1025");
+fetch("https://github.com/r-spacex/SpaceX-API");
 const json = await res.json();
+setData(json.results);
+};
 
-const data = json.results;
+obtenerDatos();
+}, []); // ← vacío si no usas tipoSeleccionado aún
 
-data.forEach((pokemon) => {
+return (
+<ScrollView>
+<View style={styles.lista}>
+{data.map((pokemon, index) => {
 const id = pokemon.url.split("/")[6];
-const item = document.createElement("div");
+return (
+<View key={index} style={styles.item}>
 
-item.innerHTML = `
-<p>${id} - ${pokemon.name}</p>
-<img
-src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/p
-okemon/other/official-artwork/${id}.png" style="width: 100px; height:
-100px;" />
-`;
+<Text>{id} - {pokemon.name}</Text>
+<Image
+source={{
+uri:
+`https://api.spacexdata.com/v4/crew${id}.png`,
+}}
+style={styles.imagen}
+/>
+</View>
+);
+})}
+</View>
+</ScrollView>
+);
+}
 
-lista.appendChild(item);
+const styles = StyleSheet.create({
+lista: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+gap: 5,
+justifyContent: 'space-between',
+padding: 10,
+},
+item: {
+backgroundColor: 'aliceblue',
+width: '48%',
+padding: 10,
+alignItems: 'center',
+
+marginBottom: 10,
+},
+imagen: {
+width: 100,
+height: 100,
+resizeMode: 'contain',
+},
+buscador: {
+margin: 10,
+padding: 10,
+borderWidth: 1,
+borderColor: '#ccc',
+borderRadius: 10,
+},
 });
-} catch (error) {
-app.innerHTML = `<p>Error al cargar los Pokémon:
-${error.message}</p>`;
-}
-}

@@ -1,45 +1,70 @@
+import React, { useState } from 'react';
+import { View, TextInput, Button, Text, StyleSheet, Alert } from
+'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebaseConfig.js'; // Asegúrate de que esta ruta sea correcta
-import mostrarRegistro from './registro.js';
+import { auth } from '../../firebase/firebaseConfig'; // Ajusta el path si es diferente
+//import { useNavigation } from '@react-navigation/native';}
+import { useNavigation } from '@react-navigation/native';
 
-export default function mostrarLogin() {
-  const app = document.getElementById("app");
+export default function Login() {
+const [correo, setCorreo] = useState('');
+const [contrasena, setContrasena] = useState('');
+const navigation = useNavigation();
 
-  app.innerHTML = `
-    <div style="max-width: 400px; margin: auto; padding: 20px;">
-      <h2>Iniciar Sesión</h2>
-      <input type="email" id="correo" placeholder="Correo electrónico"
-        style="width: 100%; padding: 10px; margin-bottom: 10px;" />
-      <input type="password" id="contrasena" placeholder="Contraseña"
-        style="width: 100%; padding: 10px; margin-bottom: 10px;" />
-      <button id="btnLogin" style="width: 100%; padding: 10px;">Ingresar</button>
-      <p style="margin-top: 10px; text-align: center;">
-        ¿No tienes cuenta?
-        <a href="#" id="irRegistro">Regístrate</a>
-      </p>
-    </div>
-  `;
-
-  document.getElementById("btnLogin").addEventListener("click", async () => {
-    const correo = document.getElementById("correo").value.trim();
-    const contrasena = document.getElementById("contrasena").value;
-
-    if (!correo || !contrasena) {
-      alert("Por favor, completa ambos campos.");
-      return;
-    }
-
-    try {
-      await signInWithEmailAndPassword(auth, correo, contrasena);
-      alert("Inicio de sesión exitoso");
-      // Aquí puedes redirigir al usuario o mostrar la pantalla principal de tu app
-    } catch (error) {
-      alert("Error al iniciar sesión: " + error.message);
-    }
-  });
-
-  document.getElementById("irRegistro").addEventListener("click", (e) => {
-    e.preventDefault();
-    mostrarRegistro();
-  });
+const handleLogin = async () => {
+try {
+await signInWithEmailAndPassword(auth, correo, contrasena);
+} catch (error) {
+Alert.alert('Error al iniciar sesión', error.message);
 }
+};
+
+return (
+<View style={styles.container}>
+<Text style={styles.titulo}>Iniciar Sesión</Text>
+
+<TextInput
+placeholder="Correo electrónico"
+value={correo}
+onChangeText={setCorreo}
+style={styles.input}
+autoCapitalize="none"
+keyboardType="email-address"
+/>
+<TextInput
+placeholder="Contraseña"
+value={contrasena}
+onChangeText={setContrasena}
+style={styles.input}
+secureTextEntry
+/>
+
+<Button title="Ingresar" onPress={handleLogin} />
+<View style={{ marginTop: 10 }}>
+<Button title="¿No tienes cuenta? Regístrate" onPress={() =>
+navigation.navigate('Registro')} />
+</View>
+</View>
+);
+}
+
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+
+justifyContent: 'center',
+padding: 20,
+},
+titulo: {
+fontSize: 24,
+marginBottom: 20,
+textAlign: 'center'
+},
+input: {
+borderWidth: 1,
+borderColor: '#ccc',
+padding: 12,
+marginBottom: 12,
+borderRadius: 6,
+},
+});
