@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-
+import 'react-native-get-random-values';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from
 '@react-navigation/native-stack';
@@ -26,12 +26,18 @@ const [usuario, setUsuario] = useState(null);
 const [cargando, setCargando] = useState(true);
 
 useEffect(() => {
-const unsubscribe = onAuthStateChanged(auth, (user) => {
-setUsuario(user);
-setCargando(false);
-});
-return unsubscribe;
+  try {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log('Usuario detectado:', user);
+      setUsuario(user);
+      setCargando(false);
+    });
 
+    return unsubscribe;
+  } catch (error) {
+    console.error('Error al detectar usuario:', error);
+    setCargando(false);
+  }
 }, []);
 
 if (cargando) {

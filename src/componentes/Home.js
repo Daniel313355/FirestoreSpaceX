@@ -1,71 +1,65 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, Image } from
-'react-native';
+import { StyleSheet, Text, View, ScrollView, Image } from 'react-native';
 
 export default function Home() {
-const [data, setData] = useState([]);
+  const [data, setData] = useState([]);
 
-useEffect(() => {
-const obtenerDatos = async () => {
-const res = await
-fetch("https://github.com/r-spacex/SpaceX-API");
-const json = await res.json();
-setData(json.results);
-};
+  useEffect(() => {
+    const obtenerDatos = async () => {
+      try {
+        const res = await fetch("https://api.spacexdata.com/v4/crew");
+        const json = await res.json();
+        setData(json);
+      } catch (error) {
+        console.error("Error al obtener los datos:", error);
+      }
+    };
 
-obtenerDatos();
-}, []); // ← vacío si no usas tipoSeleccionado aún
+    obtenerDatos();
+  }, []);
 
-return (
-<ScrollView>
-<View style={styles.lista}>
-{data.map((pokemon, index) => {
-const id = pokemon.url.split("/")[6];
-return (
-<View key={index} style={styles.item}>
-
-<Text>{id} - {pokemon.name}</Text>
-<Image
-source={{
-uri:
-`https://api.spacexdata.com/v4/crew${id}.png`,
-}}
-style={styles.imagen}
-/>
-</View>
-);
-})}
-</View>
-</ScrollView>
-);
+  return (
+    <ScrollView>
+      <View style={styles.lista}>
+        {data.map((persona, index) => (
+          <View key={index} style={styles.item}>
+            <Text style={styles.nombre}>{persona.name}</Text>
+            <Image
+              source={{ uri: persona.image }}
+              style={styles.imagen}
+            />
+          </View>
+        ))}
+      </View>
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
-lista: {
-flexDirection: 'row',
-flexWrap: 'wrap',
-gap: 5,
-justifyContent: 'space-between',
-padding: 10,
-},
-item: {
-backgroundColor: 'aliceblue',
-width: '48%',
-padding: 10,
-alignItems: 'center',
-
-marginBottom: 10,
-},
-imagen: {
-width: 100,
-height: 100,
-resizeMode: 'contain',
-},
-buscador: {
-margin: 10,
-padding: 10,
-borderWidth: 1,
-borderColor: '#ccc',
-borderRadius: 10,
-},
+  lista: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    padding: 10,
+  },
+  item: {
+    backgroundColor: 'aliceblue',
+    width: '48%',
+    padding: 10,
+    alignItems: 'center',
+    marginBottom: 10,
+    borderRadius: 10,
+  },
+  imagen: {
+    width: 100,
+    height: 100,
+    resizeMode: 'cover',
+    borderRadius: 50,
+    marginTop: 10,
+  },
+  nombre: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    textAlign: 'center',
+  },
 });
